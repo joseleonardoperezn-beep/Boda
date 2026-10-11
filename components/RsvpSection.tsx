@@ -4,18 +4,22 @@ import React from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Guest } from '@/lib/types';
 
+// 1. Agregamos weddingPhone a la interfaz
 interface RsvpSectionProps {
   guest: Guest;
+  weddingPhone: string;
 }
 
-export default function RsvpSection({ guest }: RsvpSectionProps) {
+// 2. Recibimos weddingPhone en la función
+export default function RsvpSection({ guest, weddingPhone }: RsvpSectionProps) {
   const whatsappMessage = encodeURIComponent(
     `Hola Lis y Leo. Confirmo con mucha alegria mi asistencia a su boda el 7 de diciembre en Pamplona.\n\n` +
       `Nombre o Familia: ${guest.name}\n` +
       `Nos vemos muy pronto.`
   );
 
-  const whatsappUrl = `https://wa.me/573108726049?text=${whatsappMessage}`;
+  // 3. Usamos la variable weddingPhone en el enlace
+  const whatsappUrl = `https://wa.me/${weddingPhone}?text=${whatsappMessage}`;
 
   return (
     <section className="my-16 space-y-6">
