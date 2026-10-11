@@ -3,7 +3,14 @@
 import React from 'react';
 import { Mail, Heart } from 'lucide-react';
 
-export default function GiftRegistry() {
+// 1. Definimos la interfaz con los datos que recibe el componente
+interface GiftRegistryProps {
+  guestId: string;
+  guestName: string;
+}
+
+// 2. Le indicamos a la función que acepte esas propiedades
+export default function GiftRegistry({ guestId, guestName }: GiftRegistryProps) {
   return (
     <section className="my-20 space-y-8 text-center px-4">
       <div className="space-y-3">
@@ -17,7 +24,7 @@ export default function GiftRegistry() {
       </div>
 
       <div className="oil-card p-8 md:p-10 max-w-2xl mx-auto space-y-6 relative overflow-hidden">
-        {/* Elemento decorativo de fondo (un sobre grande semitransparente) */}
+        {/* Elemento decorativo de fondo */}
         <div className="absolute -top-10 -right-10 text-pastel-cream-dark/30 transform rotate-12 pointer-events-none">
           <Mail className="w-40 h-40" />
         </div>
