@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Lista de invitados no válida' }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lis-y-leo.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://boda-lis-leo.vercel.app';
     const results = [];
 
     for (const g of guests) {
