@@ -7,49 +7,82 @@ interface BackgroundVideoProps {
   startAudio?: boolean;
 }
 
+declare global {
+  interface Window {
+    Vimeo?: any;
+  }
+}
+
 export default function BackgroundVideo({ startAudio = false }: BackgroundVideoProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const playerRef = useRef<any>(null);
 
-  // Iniciar audio y video cuando startAudio se vuelve true (al terminar el intro)
   useEffect(() => {
-    if (startAudio && videoRef.current) {
-      videoRef.current.muted = false; // Desmutear
-      videoRef.current.play().then(() => {
+    const initBgPlayer = () => {
+      if (!window.Vimeo) return;
+      const iframe = document.getElementById('vimeo-bg-iframe');
+      if (iframe) {
+        playerRef.current = new window.Vimeo.Player(iframe);
+        playerRef.current.on('ended', () => {
+          playerRef.current.play().catch(() => {});
+        });
+      }
+    };
+
+    if (!window.Vimeo) {
+      const script = document.createElement('script');
+      script.src = 'https://player.vimeo.com/api/player.js';
+      script.onload = initBgPlayer;
+      document.body.appendChild(script);
+    } else {
+      initBgPlayer();
+    }
+
+    return () => {
+      if (playerRef.current && playerRef.current.destroy) {
+        playerRef.current.destroy().catch(() => {});
+      }
+    };
+  }, []);
+
+  // Iniciar audio cuando startAudio se vuelve true (al terminar el intro)
+  useEffect(() => {
+    if (startAudio && playerRef.current) {
+      playerRef.current.setVolume(0.85); // 85% de volumen
+      playerRef.current.play().then(() => {
         setIsPlaying(true);
         setIsMuted(false);
-      }).catch(e => console.log("Autoplay bloqueado:", e));
+      }).catch((e: any) => console.log("Autoplay de audio bloqueado:", e));
     }
   }, [startAudio]);
 
   const toggleAudio = () => {
-    if (!videoRef.current) return;
+    if (!playerRef.current) return;
 
     if (isMuted) {
-      videoRef.current.muted = false;
-      videoRef.current.play();
+      playerRef.current.setVolume(0.85);
       setIsMuted(false);
       setIsPlaying(true);
     } else {
-      videoRef.current.muted = true;
+      playerRef.current.setVolume(0);
       setIsMuted(true);
     }
   };
 
   return (
     <>
-      {/* 1. Video de Fondo a Pantalla Completa usando HTML5 nativo */}
+      {/* 1. Video de Fondo a Pantalla Completa usando Vimeo */}
       <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
-        <video
-          ref={videoRef}
-          src="https://www.dropbox.com/scl/fi/7ajhyib3fjdgsovt19xfz/video-output-DE638A98-C81B-48BA-A2C7-F32A8570905F-2.mov?rlkey=fxb34wed8kv7jeif9imjium1r&st=zzsbwubn&raw=1"
-          className="w-full h-full object-cover filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
-          autoPlay // Inicia automáticamente (muteado por el navegador hasta que startAudio sea true)
-          loop // Se repite infinitamente
-          muted // Comienza muteado por defecto para permitir el autoplay en móviles
-          playsInline // Evita que se abra en pantalla completa en iOS
-        />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] transform scale-[1.25]">
+          <iframe
+            id="vimeo-bg-iframe"
+            src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=1&muted=1&loop=1&autopause=0&dnt=1"
+            className="absolute top-0 left-0 w-full h-full filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
+            allow="autoplay; fullscreen"
+            style={{ border: 'none' }}
+          />
+        </div>
 
         {/* Capa de Superposición de Óleo */}
         <div className="absolute inset-0 bg-pastel-cream/50 backdrop-blur-sm" />

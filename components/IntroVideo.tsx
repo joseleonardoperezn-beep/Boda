@@ -1,17 +1,23 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, SkipForward, Play } from 'lucide-react';
 
 interface IntroVideoProps {
   onFinish: () => void;
 }
 
+declare global {
+  interface Window {
+    Vimeo?: any;
+  }
+}
+
 export default function IntroVideo({ onFinish }: IntroVideoProps) {
   const [isFading, setIsFading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<any>(null);
 
   const handleFinish = () => {
     setIsFading(true);
@@ -20,17 +26,51 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
     }, 1000);
   };
 
+  useEffect(() => {
+    const initPlayer = () => {
+      if (!window.Vimeo) return;
+      const iframe = document.getElementById('vimeo-intro-iframe');
+      if (iframe) {
+        playerRef.current = new window.Vimeo.Player(iframe);
+        playerRef.current.on('ended', () => {
+          handleFinish();
+        });
+      }
+    };
+
+    if (!window.Vimeo) {
+      const script = document.createElement('script');
+      script.src = 'https://player.vimeo.com/api/player.js';
+      script.onload = initPlayer;
+      document.body.appendChild(script);
+    } else {
+      initPlayer();
+    }
+
+    return () => {
+      if (playerRef.current && playerRef.current.destroy) {
+        playerRef.current.destroy().catch(() => {});
+      }
+    };
+  }, []);
+
   const handleStart = () => {
     setHasStarted(true);
-    if (videoRef.current) {
-      videoRef.current.play().catch(e => console.log("Autoplay bloqueado:", e));
+    if (playerRef.current) {
+      playerRef.current.setVolume(1);
+      playerRef.current.play().catch((e: any) => console.log("Autoplay bloqueado:", e));
     }
   };
 
   const toggleSound = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+    if (playerRef.current) {
+      if (isMuted) {
+        playerRef.current.setVolume(1);
+        setIsMuted(false);
+      } else {
+        playerRef.current.setVolume(0);
+        setIsMuted(true);
+      }
     }
   };
 
@@ -41,7 +81,7 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
       }`}
     >
       {/* Botones Flotantes Superiores */}
-      <div className="absolute top-6 right-6 z-30 flex items-center space-x-3">
+      <div className="absolute top-6 right-6 z-30 flex items-center space-x-3 pointer-events-auto">
         {hasStarted && (
           <button
             onClick={toggleSound}
@@ -62,7 +102,7 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
 
       {/* Pantalla previa para el celular (Botón de inicio) */}
       {!hasStarted && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-pastel-cream/95 backdrop-blur-sm text-center px-6">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-pastel-cream/95 backdrop-blur-sm text-center px-6 pointer-events-auto">
           <p className="text-xs uppercase tracking-widest text-pastel-blue-dark font-sans font-medium mb-2">
             Nuestra Historia
           </p>
@@ -88,15 +128,17 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
         </div>
       )}
 
-      {/* Reproductor Nativo HTML5 */}
-      <div className="absolute inset-0 w-full h-full bg-black">
-        <video
-          ref={videoRef}
-          src="https://www.dropbox.com/scl/fi/xnu9ss9z0a71bmkyudagp/video-output-506CCBEA-08FE-472C-95CA-970FC80E2BE2-1.mov?rlkey=7pqug3h3r9ifi83ezuoq644fz&st=pd9jjodc&raw=1" 
-          className="w-full h-full object-cover opacity-90"
-          playsInline
-          onEnded={handleFinish}
-        />
+      {/* Contenedor del IFrame de Vimeo con escalado para ocultar bordes negros */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden flex items-center justify-center bg-black">
+        <div className="w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] relative transform scale-[1.15]">
+          <iframe
+            id="vimeo-intro-iframe"
+            src="https://player.vimeo.com/video/1234909134?api=1&controls=0&title=0&byline=0&portrait=0&autopause=0&dnt=1"
+            className="absolute top-0 left-0 w-full h-full opacity-90"
+            allow="autoplay; fullscreen; picture-in-picture"
+            style={{ border: 'none' }}
+          />
+        </div>
       </div>
     </div>
   );
