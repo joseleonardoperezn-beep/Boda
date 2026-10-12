@@ -67,7 +67,6 @@ export default function InvitationPage() {
       {/* 1. Video Inicial Abrebocas (DagcLaYABC0) con fade-out al terminar o saltar */}
       {showIntro && (
         <IntroVideo
-          videoId={INTRO_YOUTUBE_ID}
           onFinish={() => setShowIntro(false)}
         />
       )}
