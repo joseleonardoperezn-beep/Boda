@@ -46,14 +46,24 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
     };
   }, []);
 
-  // Iniciar audio cuando startAudio se vuelve true (al terminar el intro)
+  // Iniciar audio y video SOLAMENTE cuando startAudio se vuelve true
   useEffect(() => {
     if (startAudio && playerRef.current) {
-      playerRef.current.setVolume(0.85); // 85% de volumen
+      // Intentamos reproducir con volumen
+      playerRef.current.setVolume(0.85);
       playerRef.current.play().then(() => {
         setIsPlaying(true);
-        setIsMuted(false);
-      }).catch((e: any) => console.log("Autoplay de audio bloqueado:", e));
+        setIsMuted(false); // ¡Éxito! Suena la música sin problemas
+      }).catch((error: any) => {
+        console.log("El navegador bloqueó el sonido automático. Iniciando Plan B...", error);
+        // PLAN B: Si el celular bloquea el sonido, reproducimos el video silenciado 
+        // para que la página no se quede congelada.
+        playerRef.current.setVolume(0);
+        playerRef.current.play().then(() => {
+          setIsPlaying(true);
+          setIsMuted(true); // Se queda en "Música pausada" para que el usuario le dé clic
+        }).catch(() => {});
+      });
     }
   }, [startAudio]);
 
@@ -62,6 +72,7 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
 
     if (isMuted) {
       playerRef.current.setVolume(0.85);
+      playerRef.current.play();
       setIsMuted(false);
       setIsPlaying(true);
     } else {
@@ -72,12 +83,13 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
 
   return (
     <>
-      {/* 1. Video de Fondo a Pantalla Completa usando Vimeo */}
-      <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
+      {/* 1. Video de Fondo a Pantalla Completa (Completamente invisible hasta que startAudio sea true) */}
+      <div className={`fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none transition-opacity duration-1000 ease-in-out ${startAudio ? 'opacity-100' : 'opacity-0'}`}>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] transform scale-[1.25]">
           <iframe
             id="vimeo-bg-iframe"
-            src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=1&muted=1&loop=1&autopause=0&dnt=1"
+            // Cambiamos autoplay=1 a autoplay=0 para que espere nuestra orden
+            src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=0&muted=0&loop=1&autopause=0&dnt=1"
             className="absolute top-0 left-0 w-full h-full filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
             allow="autoplay; fullscreen"
             style={{ border: 'none' }}
@@ -88,7 +100,7 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
         <div className="absolute inset-0 bg-pastel-cream/50 backdrop-blur-sm" />
       </div>
 
-      {/* 2. Botón Flotante Discreto de Música para el Invitado */}
+      {/* 2. Botón Flotante Discreto de Música */}
       {startAudio && (
         <aside 
           aria-label="Control de música"
@@ -100,7 +112,7 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
             title={isMuted ? 'Activar música' : 'Silenciar música'}
           >
             <div className={`w-2 h-2 rounded-full ${isMuted ? 'bg-gray-400' : 'bg-pastel-blue-dark animate-pulse'}`} />
-            <Music className={`w-3.5 h-3.5 ${!isMuted && 'text-pastel-blue-dark'}`} />
+            <Music className={`w-3.5 h-3.5 ${!isMuted ? 'text-pastel-blue-dark' : 'text-gray-500'}`} />
             <span className="font-serif italic text-xs tracking-wide">
               {isMuted ? 'Música pausada' : 'Nuestra canción'}
             </span>
