@@ -17,6 +17,7 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const playerRef = useRef<any>(null);
+  const isUnlocked = useRef(false);
 
   useEffect(() => {
     const initBgPlayer = () => {
@@ -46,21 +47,47 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
     };
   }, []);
 
-  // Cuando termina el intro (startAudio = true), iniciamos el video DESDE CERO
+  // TRUCO MAESTRO: "Desbloquear" el reproductor con el primer toque del usuario
+  useEffect(() => {
+    const unlockPlayer = () => {
+      if (playerRef.current && !isUnlocked.current) {
+        // Le damos play en silencio e inmediatamente lo pausamos.
+        // Esto le demuestra al celular que el usuario "interactuó" con este reproductor.
+        playerRef.current.setVolume(0);
+        playerRef.current.play().then(() => {
+          playerRef.current.pause();
+          playerRef.current.setCurrentTime(0);
+          isUnlocked.current = true;
+        }).catch(() => {});
+
+        // Una vez desbloqueado, limpiamos los detectores de clics
+        window.removeEventListener('click', unlockPlayer);
+        window.removeEventListener('touchstart', unlockPlayer);
+      }
+    };
+
+    // Escuchamos el clic que el usuario hará en "Camina con nosotros" o "Saltar" en la pantalla de inicio
+    window.addEventListener('click', unlockPlayer);
+    window.addEventListener('touchstart', unlockPlayer);
+
+    return () => {
+      window.removeEventListener('click', unlockPlayer);
+      window.removeEventListener('touchstart', unlockPlayer);
+    };
+  }, []);
+
+  // Cuando termina el intro (startAudio = true), iniciamos el video con música sin bloqueos
   useEffect(() => {
     if (startAudio && playerRef.current) {
-      // 1. Regresamos el video exactamente al inicio (segundo 0)
       playerRef.current.setCurrentTime(0).then(() => {
-        // 2. Le ponemos el volumen al 85%
         playerRef.current.setVolume(0.85);
-        // 3. ¡A reproducir nuestra canción!
         return playerRef.current.play();
       }).then(() => {
         setIsMuted(false);
         setIsPlaying(true);
       }).catch((error: any) => {
-        console.log("No se pudo iniciar el audio automáticamente", error);
-        setIsMuted(true); 
+        console.log("Bloqueo persistente del navegador", error);
+        setIsMuted(true);
       });
     }
   }, [startAudio]);
@@ -86,7 +113,6 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] transform scale-[1.25]">
           <iframe
             id="vimeo-bg-iframe"
-            // IMPORTANTE: Cambiamos autoplay=0 para que NO avance en segundo plano
             src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=0&muted=0&loop=1&autopause=0&dnt=1"
             className="absolute top-0 left-0 w-full h-full filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
             allow="autoplay; fullscreen"
