@@ -47,26 +47,19 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
     };
   }, []);
 
-  // TRUCO MAESTRO: "Desbloquear" el reproductor con el primer toque del usuario
+  // TRUCO MAESTRO: Empezar a reproducir en las sombras con el primer clic del usuario en la web
   useEffect(() => {
     const unlockPlayer = () => {
       if (playerRef.current && !isUnlocked.current) {
-        // Le damos play en silencio e inmediatamente lo pausamos.
-        // Esto le demuestra al celular que el usuario "interactuó" con este reproductor.
+        isUnlocked.current = true;
+        // Lo ponemos en volumen 0 y le damos Play. 
+        // Se quedará reproduciéndose de fondo sin que nadie lo note.
         playerRef.current.setVolume(0);
-        playerRef.current.play().then(() => {
-          playerRef.current.pause();
-          playerRef.current.setCurrentTime(0);
-          isUnlocked.current = true;
-        }).catch(() => {});
-
-        // Una vez desbloqueado, limpiamos los detectores de clics
-        window.removeEventListener('click', unlockPlayer);
-        window.removeEventListener('touchstart', unlockPlayer);
+        playerRef.current.play().catch(() => {});
       }
     };
 
-    // Escuchamos el clic que el usuario hará en "Camina con nosotros" o "Saltar" en la pantalla de inicio
+    // Escuchamos cualquier clic o toque en la pantalla (como el botón "Camina con nosotros")
     window.addEventListener('click', unlockPlayer);
     window.addEventListener('touchstart', unlockPlayer);
 
@@ -76,17 +69,18 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
     };
   }, []);
 
-  // Cuando termina el intro (startAudio = true), iniciamos el video con música sin bloqueos
+  // Cuando termina la introducción (startAudio = true)
   useEffect(() => {
     if (startAudio && playerRef.current) {
+      // 1. Regresamos el video al segundo cero
       playerRef.current.setCurrentTime(0).then(() => {
+        // 2. Como el video YA ESTABA reproduciéndose (gracias al truco), 
+        // simplemente le subimos el volumen. ¡Cero bloqueos!
         playerRef.current.setVolume(0.85);
-        return playerRef.current.play();
-      }).then(() => {
         setIsMuted(false);
         setIsPlaying(true);
       }).catch((error: any) => {
-        console.log("Bloqueo persistente del navegador", error);
+        console.log("Seguridad persistente del navegador", error);
         setIsMuted(true);
       });
     }
@@ -97,7 +91,7 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
 
     if (isMuted) {
       playerRef.current.setVolume(0.85);
-      playerRef.current.play();
+      playerRef.current.play(); // Por si acaso estaba pausado
       setIsMuted(false);
       setIsPlaying(true);
     } else {
@@ -113,7 +107,8 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] transform scale-[1.25]">
           <iframe
             id="vimeo-bg-iframe"
-            src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=0&muted=0&loop=1&autopause=0&dnt=1"
+            // Configuramos autoplay=0 y muted=1 por seguridad inicial
+            src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=0&muted=1&loop=1&autopause=0&dnt=1"
             className="absolute top-0 left-0 w-full h-full filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
             allow="autoplay; fullscreen"
             style={{ border: 'none' }}
