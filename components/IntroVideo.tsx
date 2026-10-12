@@ -1,28 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Volume2, VolumeX, SkipForward, Play } from 'lucide-react';
 
 interface IntroVideoProps {
   onFinish: () => void;
-  videoId?: string;
 }
 
-declare global {
-  interface Window {
-    onYouTubeIframeAPIReady?: () => void;
-    YT?: any;
-  }
-}
-
-export default function IntroVideo({
-  onFinish,
-  videoId = 'DagcLaYABC0',
-}: IntroVideoProps) {
+export default function IntroVideo({ onFinish }: IntroVideoProps) {
   const [isFading, setIsFading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const playerRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleFinish = () => {
     setIsFading(true);
@@ -31,70 +20,17 @@ export default function IntroVideo({
     }, 1000);
   };
 
-  useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
-    }
-
-    const initPlayer = () => {
-      if (!window.YT || !window.YT.Player) return;
-
-      playerRef.current = new window.YT.Player('youtube-intro-player', {
-        videoId: videoId,
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          cc_load_policy: 0,
-          iv_load_policy: 3,
-        },
-        events: {
-          onStateChange: (event: any) => {
-            if (event.data === 0) {
-              handleFinish();
-            }
-          },
-        },
-      });
-    };
-
-    if (window.YT && window.YT.Player) {
-      initPlayer();
-    } else {
-      window.onYouTubeIframeAPIReady = initPlayer;
-    }
-
-    return () => {
-      if (playerRef.current && playerRef.current.destroy) {
-        playerRef.current.destroy();
-      }
-    };
-  }, [videoId]);
-
   const handleStart = () => {
     setHasStarted(true);
-    if (playerRef.current && playerRef.current.playVideo) {
-      playerRef.current.unMute();
-      playerRef.current.playVideo();
+    if (videoRef.current) {
+      videoRef.current.play().catch(e => console.log("Autoplay bloqueado:", e));
     }
   };
 
   const toggleSound = () => {
-    if (playerRef.current) {
-      if (isMuted) {
-        playerRef.current.unMute();
-        setIsMuted(false);
-      } else {
-        playerRef.current.mute();
-        setIsMuted(true);
-      }
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
     }
   };
 
@@ -109,7 +45,6 @@ export default function IntroVideo({
         {hasStarted && (
           <button
             onClick={toggleSound}
-            aria-label="Silenciar o activar sonido"
             className="flex items-center justify-center w-11 h-11 rounded-full bg-white/60 backdrop-blur-md border border-white/80 text-pastel-charcoal hover:bg-white transition-all shadow-sm"
           >
             {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
@@ -125,7 +60,7 @@ export default function IntroVideo({
         </button>
       </div>
 
-      {/* Pantalla previa para garantizar audio en celulares */}
+      {/* Pantalla previa para el celular (Botón de inicio) */}
       {!hasStarted && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-pastel-cream/95 backdrop-blur-sm text-center px-6">
           <p className="text-xs uppercase tracking-widest text-pastel-blue-dark font-sans font-medium mb-2">
@@ -153,13 +88,16 @@ export default function IntroVideo({
         </div>
       )}
 
-      {/* Contenedor del IFrame de YouTube con escalado para ocultar barras de YouTube */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden flex items-center justify-center">
-        <div className="w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] relative transform scale-110">
-          <div id="youtube-intro-player" className="w-full h-full" />
-        </div>
+      {/* Reproductor Nativo HTML5 */}
+      <div className="absolute inset-0 w-full h-full bg-black">
+        <video
+          ref={videoRef}
+          src="https://www.dropbox.com/scl/fi/xnu9ss9z0a71bmkyudagp/video-output-506CCBEA-08FE-472C-95CA-970FC80E2BE2-1.mov?rlkey=7pqug3h3r9ifi83ezuoq644fz&st=pd9jjodc&raw=1" 
+          className="w-full h-full object-cover opacity-90"
+          playsInline
+          onEnded={handleFinish}
+        />
       </div>
     </div>
   );
 }
-
