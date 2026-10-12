@@ -45,13 +45,13 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
           ref={videoRef}
           src="https://www.dropbox.com/scl/fi/7ajhyib3fjdgsovt19xfz/video-output-DE638A98-C81B-48BA-A2C7-F32A8570905F-2.mov?rlkey=fxb34wed8kv7jeif9imjium1r&st=zzsbwubn&raw=1"
           className="w-full h-full object-cover filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
-          autoPlay // Inicia automáticamente (probablemente muteado por el navegador hasta que startAudio sea true)
+          autoPlay // Inicia automáticamente (muteado por el navegador hasta que startAudio sea true)
           loop // Se repite infinitamente
           muted // Comienza muteado por defecto para permitir el autoplay en móviles
           playsInline // Evita que se abra en pantalla completa en iOS
         />
 
-        {/* Capa de Superposición de Óleo (Modificada para dejar ver el video y leer el texto) */}
+        {/* Capa de Superposición de Óleo */}
         <div className="absolute inset-0 bg-pastel-cream/50 backdrop-blur-sm" />
       </div>
 
