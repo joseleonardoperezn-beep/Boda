@@ -74,7 +74,6 @@ export default function InvitationPage() {
       {/* 2. Video de Fondo (p3sv-fDlD30) CON LA CANCIÓN ACTIVA */}
       {/* startAudio={!showIntro} inicia la música en cuanto se cierra el video inicial */}
       <BackgroundVideo
-        videoId={BACKGROUND_YOUTUBE_ID}
         startAudio={!showIntro}
       />
 

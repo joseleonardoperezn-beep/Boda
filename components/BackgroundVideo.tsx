@@ -4,110 +4,52 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Music, Volume2, VolumeX } from 'lucide-react';
 
 interface BackgroundVideoProps {
-  videoId?: string;
   startAudio?: boolean;
 }
 
-export default function BackgroundVideo({
-  videoId = 'p3sv-fDlD30',
-  startAudio = false,
-}: BackgroundVideoProps) {
+export default function BackgroundVideo({ startAudio = false }: BackgroundVideoProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const playerRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Iniciar audio y video cuando startAudio se vuelve true (al terminar el intro)
   useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
-    }
-
-    const initBgPlayer = () => {
-      if (!window.YT || !window.YT.Player) return;
-
-      playerRef.current = new window.YT.Player('youtube-bg-player', {
-        videoId: videoId,
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          iv_load_policy: 3,
-        },
-        events: {
-          onReady: (event: any) => {
-            if (startAudio) {
-              event.target.unMute();
-              event.target.setVolume(85);
-              event.target.playVideo();
-              setIsPlaying(true);
-            }
-          },
-          onStateChange: (event: any) => {
-            // YT.PlayerState.ENDED === 0 -> Bucle continuo
-            if (event.data === 0) {
-              event.target.seekTo(0);
-              event.target.playVideo();
-            }
-          },
-        },
-      });
-    };
-
-    if (window.YT && window.YT.Player) {
-      initBgPlayer();
-    } else {
-      const prevCallback = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        if (prevCallback) prevCallback();
-        initBgPlayer();
-      };
-    }
-
-    return () => {
-      if (playerRef.current && playerRef.current.destroy) {
-        playerRef.current.destroy();
-      }
-    };
-  }, [videoId]);
-
-  // Al terminar o saltar el video de abrebocas, iniciar la canción automáticamente
-  useEffect(() => {
-    if (startAudio && playerRef.current && playerRef.current.playVideo) {
-      playerRef.current.unMute();
-      playerRef.current.setVolume(85);
-      playerRef.current.playVideo();
-      setIsPlaying(true);
-      setIsMuted(false);
+    if (startAudio && videoRef.current) {
+      videoRef.current.muted = false; // Desmutear
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsMuted(false);
+      }).catch(e => console.log("Autoplay bloqueado:", e));
     }
   }, [startAudio]);
 
   const toggleAudio = () => {
-    if (!playerRef.current) return;
+    if (!videoRef.current) return;
 
     if (isMuted) {
-      playerRef.current.unMute();
-      playerRef.current.playVideo();
+      videoRef.current.muted = false;
+      videoRef.current.play();
       setIsMuted(false);
       setIsPlaying(true);
     } else {
-      playerRef.current.mute();
+      videoRef.current.muted = true;
       setIsMuted(true);
     }
   };
 
   return (
     <>
-      {/* 1. Video de Fondo a Pantalla Completa */}
+      {/* 1. Video de Fondo a Pantalla Completa usando HTML5 nativo */}
       <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] transform scale-125">
-          <div id="youtube-bg-player" className="w-full h-full filter contrast-[0.92] saturate-[0.88] brightness-[1.04]" />
-        </div>
+        <video
+          ref={videoRef}
+          src="https://www.dropbox.com/scl/fi/7ajhyib3fjdgsovt19xfz/video-output-DE638A98-C81B-48BA-A2C7-F32A8570905F-2.mov?rlkey=fxb34wed8kv7jeif9imjium1r&st=zzsbwubn&raw=1"
+          className="w-full h-full object-cover filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
+          autoPlay // Inicia automáticamente (probablemente muteado por el navegador hasta que startAudio sea true)
+          loop // Se repite infinitamente
+          muted // Comienza muteado por defecto para permitir el autoplay en móviles
+          playsInline // Evita que se abra en pantalla completa en iOS
+        />
 
         {/* Capa de Superposición de Óleo (Modificada para dejar ver el video y leer el texto) */}
         <div className="absolute inset-0 bg-pastel-cream/50 backdrop-blur-sm" />
@@ -117,7 +59,7 @@ export default function BackgroundVideo({
       {startAudio && (
         <aside 
           aria-label="Control de música"
-          className="fixed bottom-6 right-6 z-40 animate-fade-in"
+          className="fixed bottom-6 right-6 z-40 animate-fade-in pointer-events-auto"
         >
           <button
             onClick={toggleAudio}
