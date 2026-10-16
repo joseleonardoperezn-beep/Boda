@@ -88,7 +88,7 @@ export default function InvitationPage() {
             Lis & Leo
           </h1>
           <p className="font-serif italic text-xl text-pastel-charcoal/80 pt-2">
-            07de Diciembre de 2026
+            07 de Diciembre de 2026
           </p>
         </header>
 
