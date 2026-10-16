@@ -7,19 +7,23 @@ import { Guest } from '@/lib/types';
 // 1. Agregamos weddingPhone a la interfaz
 interface RsvpSectionProps {
   guest: Guest;
-  weddingPhone: string;
+  weddingPhone?: string;
 }
 
 // 2. Recibimos weddingPhone en la función
-export default function RsvpSection({ guest, weddingPhone }: RsvpSectionProps) {
+export default function RsvpSection({
+  guest,
+  weddingPhone = '573108726049',
+}: RsvpSectionProps) {
   const whatsappMessage = encodeURIComponent(
     `Hola Lis y Leo. Confirmo con mucha alegria mi asistencia a su boda el 7 de diciembre en Pamplona.\n\n` +
       `Nombre o Familia: ${guest.name}\n` +
       `Nos vemos muy pronto.`
   );
 
-  // 3. Usamos la variable weddingPhone en el enlace
-  const whatsappUrl = `https://wa.me/${weddingPhone}?text=${whatsappMessage}`;
+  // 3. Usamos la variable weddingPhone en el enlace (limpiando el signo + por requerimiento de wa.me)
+  const cleanPhone = weddingPhone.replace(/[^0-9]/g, '');
+  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${whatsappMessage}`;
 
   return (
     <section className="my-16 space-y-6">

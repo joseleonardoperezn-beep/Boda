@@ -113,7 +113,7 @@ export default function InvitationPage() {
         <GiftRegistry guestId={guest.id} guestName={guest.name} />
 
         {/* Confirmación RSVP Web + WhatsApp */}
-        <RsvpSection guest={guest} weddingPhone="573001234567" />
+        <RsvpSection guest={guest} weddingPhone="573108726049" />
 
         {/* Pie de página */}
         <footer className="text-center pt-8 pb-4 space-y-2 text-pastel-charcoal/60">

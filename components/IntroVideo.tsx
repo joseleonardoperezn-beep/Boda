@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, VolumeX, SkipForward, Play } from 'lucide-react';
+import { Volume2, VolumeX, SkipForward, Play, Smartphone } from 'lucide-react';
 
 interface IntroVideoProps {
   onFinish: () => void;
@@ -109,12 +109,20 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
           <h1 className="font-serif text-4xl md:text-5xl font-light text-pastel-charcoal mb-4">
             Lis & Leo
           </h1>
-          <div className="flex flex-col items-center space-y-4 mb-10 text-center px-4">
+          <div className="flex flex-col items-center space-y-4 mb-6 text-center px-4">
             <p className="font-serif text-sm md:text-base text-pastel-charcoal/80 tracking-wide">
               1 Juan 4, 19: "Nosotros amamos, porque Él nos amó primero."
             </p>
             <p className="font-serif italic text-lg md:text-xl text-pastel-charcoal max-w-lg mx-auto leading-relaxed">
               "Gracias por acompañarnos todo este tiempo en nuestro camino, queremos que sigas siendo parte de nuestra historia"
+            </p>
+          </div>
+
+          {/* Recomendación de rotación horizontal para celulares */}
+          <div className="md:hidden flex items-center space-x-2.5 px-4 py-2.5 mb-7 rounded-2xl bg-white/60 border border-pastel-blue/40 text-pastel-charcoal/80 max-w-xs shadow-sm">
+            <Smartphone className="w-5 h-5 text-pastel-blue-dark -rotate-90 flex-shrink-0 animate-pulse" />
+            <p className="font-sans text-[11px] leading-snug text-left">
+              Si nos ves desde tu celular, te recomendamos <span className="font-medium text-pastel-charcoal">girarlo en horizontal</span> para disfrutar mejor el video.
             </p>
           </div>
 
