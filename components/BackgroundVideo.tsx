@@ -27,17 +27,17 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
         playerRef.current = new window.Vimeo.Player(iframe);
         playerRef.current.ready().then(() => {
           playerRef.current.disableTextTrack().catch(() => {});
-          // En Chrome móvil, iniciamos el video silenciado en segundo plano apenas carga
+          // Lo mantenemos pausado en el segundo 0 mientras está el video de introducción
           if (!startAudio) {
-            playerRef.current.setMuted(true).catch(() => {});
-            playerRef.current.setVolume(0).catch(() => {});
-            playerRef.current.play().catch(() => {});
+            playerRef.current.pause().catch(() => {});
+            playerRef.current.setCurrentTime(0).catch(() => {});
           }
         });
         playerRef.current.on('play', () => {
           playerRef.current.disableTextTrack().catch(() => {});
         });
         playerRef.current.on('ended', () => {
+          playerRef.current.setCurrentTime(0).catch(() => {});
           playerRef.current.play().catch(() => {});
         });
       }
@@ -59,68 +59,82 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
     };
   }, []);
 
-  // Desbloqueo con el primer toque/clic del usuario en la pantalla
+  // TRUCO DE DESBLOQUEO DE AUDIO PARA CHROME Y SAFARI:
+  // Cuando el invitado toca "Camina con nosotros" o "Saltar", aprovechamos ese clic exacto
+  // para desbloquear el canal de audio CON SONIDO (no silenciado) por un instante y pausarlo en 0:00.
   useEffect(() => {
-    const unlockPlayer = () => {
-      if (playerRef.current && !isUnlocked.current) {
+    const unlockAudioWithGesture = () => {
+      if (playerRef.current && !isUnlocked.current && !startAudio) {
         isUnlocked.current = true;
         playerRef.current.disableTextTrack().catch(() => {});
-        playerRef.current.setMuted(true).catch(() => {});
-        playerRef.current.setVolume(0).catch(() => {});
-        playerRef.current.play().catch(() => {});
+        // Desbloqueamos el elemento de audio del iframe con sonido mínimo y lo pausamos de inmediato en 0:00
+        playerRef.current.setMuted(false).catch(() => {});
+        playerRef.current.setVolume(0.01).catch(() => {});
+        playerRef.current
+          .play()
+          .then(() => {
+            setTimeout(() => {
+              if (!startAudio && playerRef.current) {
+                playerRef.current.pause().catch(() => {});
+                playerRef.current.setCurrentTime(0).catch(() => {});
+              }
+            }, 150);
+          })
+          .catch(() => {});
       }
     };
 
-    window.addEventListener('click', unlockPlayer, { passive: true });
-    window.addEventListener('touchstart', unlockPlayer, { passive: true });
+    window.addEventListener('click', unlockAudioWithGesture, { passive: true });
+    window.addEventListener('touchstart', unlockAudioWithGesture, { passive: true });
 
     return () => {
-      window.removeEventListener('click', unlockPlayer);
-      window.removeEventListener('touchstart', unlockPlayer);
+      window.removeEventListener('click', unlockAudioWithGesture);
+      window.removeEventListener('touchstart', unlockAudioWithGesture);
     };
-  }, []);
+  }, [startAudio]);
 
-  // Cuando termina la introducción (startAudio = true)
+  // Apenas termina o se salta el video de introducción (startAudio = true):
+  // Ponemos el video en el segundo 0:00, activamos la música al 85% y le damos Play.
   useEffect(() => {
     if (startAudio && playerRef.current) {
-      const startBackgroundPlayback = async () => {
+      const startFromBeginningWithMusic = async () => {
         try {
           await playerRef.current.disableTextTrack().catch(() => {});
+          // 1. Forzamos a que empiece exactamente desde el inicio (0:00)
           await playerRef.current.setCurrentTime(0).catch(() => {});
-          // Primero aseguramos que el video esté reproduciéndose (Chrome pausa iframes con opacity-0)
+          // 2. Activamos el audio y el volumen de la canción
+          await playerRef.current.setMuted(false).catch(() => {});
+          await playerRef.current.setVolume(0.85).catch(() => {});
+          // 3. Reproducimos video + música sincronizados desde el segundo 0
           await playerRef.current.play();
           setIsPlaying(true);
-
-          // Luego intentamos activar el sonido
-          await playerRef.current.setMuted(false);
-          await playerRef.current.setVolume(0.85);
           setIsMuted(false);
         } catch (error) {
-          // Si Chrome móvil bloquea el cambio de audio sin un nuevo toque,
-          // forzamos que el video SÍ o SÍ se reproduzca visualmente en silencio
-          console.log('Reproduciendo en modo silencioso por política de Chrome móvil:', error);
+          console.log('Reintentando reproducción en Chrome:', error);
+          // Si por alguna razón el navegador restringió el audio automático tras 1:15 min,
+          // iniciamos en 0:00 y en el primer roce de pantalla se activa el volumen
           try {
-            await playerRef.current.setMuted(true);
-            await playerRef.current.setVolume(0);
+            await playerRef.current.setCurrentTime(0).catch(() => {});
+            await playerRef.current.setMuted(true).catch(() => {});
             await playerRef.current.play();
             setIsPlaying(true);
             setIsMuted(true);
           } catch (e) {
-            console.log('Error secundario en play:', e);
+            console.log('Error secundario:', e);
           }
         }
       };
 
-      startBackgroundPlayback();
+      startFromBeginningWithMusic();
     }
   }, [startAudio]);
 
-  // Si en Chrome quedó silenciado al pasar la intro, el primer toque o scroll en la invitación activa la música
+  // Respaldo para Chrome: si al terminar el minuto y 15 segundos de intro Chrome pide un toque para el sonido
   useEffect(() => {
     if (!startAudio || !isMuted) return;
 
-    const resumeAudioOnTouch = () => {
-      if (playerRef.current && isMuted) {
+    const enableSoundOnFirstInteraction = () => {
+      if (playerRef.current) {
         playerRef.current.setMuted(false).catch(() => {});
         playerRef.current.setVolume(0.85).catch(() => {});
         playerRef.current.play().catch(() => {});
@@ -129,12 +143,14 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
       }
     };
 
-    window.addEventListener('touchstart', resumeAudioOnTouch, { once: true, passive: true });
-    window.addEventListener('click', resumeAudioOnTouch, { once: true, passive: true });
+    window.addEventListener('touchstart', enableSoundOnFirstInteraction, { once: true, passive: true });
+    window.addEventListener('scroll', enableSoundOnFirstInteraction, { once: true, passive: true });
+    window.addEventListener('click', enableSoundOnFirstInteraction, { once: true, passive: true });
 
     return () => {
-      window.removeEventListener('touchstart', resumeAudioOnTouch);
-      window.removeEventListener('click', resumeAudioOnTouch);
+      window.removeEventListener('touchstart', enableSoundOnFirstInteraction);
+      window.removeEventListener('scroll', enableSoundOnFirstInteraction);
+      window.removeEventListener('click', enableSoundOnFirstInteraction);
     };
   }, [startAudio, isMuted]);
 
@@ -157,13 +173,12 @@ export default function BackgroundVideo({ startAudio = false }: BackgroundVideoP
   return (
     <>
       {/* 1. Video de Fondo a Pantalla Completa */}
-      {/* Usamos opacity-[0.01] en lugar de opacity-0 cuando está detrás del intro para que Chrome Android no lo congele */}
       <div className={`fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none transition-opacity duration-1000 ease-in-out ${startAudio ? 'opacity-100' : 'opacity-[0.01]'}`}>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] transform scale-[1.25]">
           <iframe
             id="vimeo-bg-iframe"
-            // autoplay=1, muted=1, playsinline=1 y texttrack=false garantizan reproducción automática en Chrome móvil sin subtítulos
-            src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=1&muted=1&loop=1&autopause=0&playsinline=1&dnt=1&texttrack=false"
+            // autoplay=0 y sin muted=1 para que no avance solo a mitad de video ni bloquee la pista de audio de Vimeo
+            src="https://player.vimeo.com/video/1234909133?api=1&controls=0&title=0&byline=0&portrait=0&autoplay=0&loop=1&autopause=0&playsinline=1&dnt=1&texttrack=false"
             className="absolute top-0 left-0 w-full h-full filter contrast-[0.92] saturate-[0.88] brightness-[1.04]"
             allow="autoplay; fullscreen; picture-in-picture"
             style={{ border: 'none' }}
