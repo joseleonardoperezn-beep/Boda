@@ -32,6 +32,13 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
       const iframe = document.getElementById('vimeo-intro-iframe');
       if (iframe) {
         playerRef.current = new window.Vimeo.Player(iframe);
+        // Desactivar subtítulos automáticos de Vimeo al cargar y reproducir
+        playerRef.current.ready().then(() => {
+          playerRef.current.disableTextTrack().catch(() => {});
+        });
+        playerRef.current.on('play', () => {
+          playerRef.current.disableTextTrack().catch(() => {});
+        });
         playerRef.current.on('ended', () => {
           handleFinish();
         });
@@ -57,6 +64,7 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
   const handleStart = () => {
     setHasStarted(true);
     if (playerRef.current) {
+      playerRef.current.disableTextTrack().catch(() => {});
       playerRef.current.setVolume(1);
       playerRef.current.play().catch((e: any) => console.log("Autoplay bloqueado:", e));
     }
@@ -141,7 +149,7 @@ export default function IntroVideo({ onFinish }: IntroVideoProps) {
         <div className="w-[100vw] h-[100vh] min-w-[177.78vh] min-h-[56.25vw] relative transform scale-[1.15]">
           <iframe
             id="vimeo-intro-iframe"
-            src="https://player.vimeo.com/video/1234909134?api=1&controls=0&title=0&byline=0&portrait=0&autopause=0&dnt=1"
+            src="https://player.vimeo.com/video/1234909134?api=1&controls=0&title=0&byline=0&portrait=0&autopause=0&dnt=1&texttrack=false"
             className="absolute top-0 left-0 w-full h-full opacity-90"
             allow="autoplay; fullscreen; picture-in-picture"
             style={{ border: 'none' }}
